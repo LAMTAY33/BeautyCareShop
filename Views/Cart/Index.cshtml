@@ -1,0 +1,28 @@
+@model List<BeautyCareShop.Models.CartItem>
+@{ ViewData["Title"] = "Giỏ hàng"; }
+<section class="container py-5">
+    <div class="section-heading"><div><span class="eyebrow">YOUR CART</span><h1>Giỏ hàng</h1></div><span class="status-chip">@(Model.Sum(x => x.Quantity)) sản phẩm</span></div>
+    @if (Model == null || Model.Count == 0)
+    {
+        <div class="empty-state"><div class="display-5">🛒</div><h3>Giỏ hàng đang trống</h3><p class="text-muted">Hãy khám phá sản phẩm của LUMIPHUX.</p><a href="/Shop" class="btn btn-dark">Tiếp tục mua sắm</a></div>
+    }
+    else
+    {
+        <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Sản phẩm</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var i in Model)
+            {
+                <tr>
+                    <td><div class="d-flex align-items-center gap-3"><img src="@i.Product?.ThumbnailUrl" style="width:72px;height:72px;object-fit:cover;border-radius:12px" alt="@i.Product?.Name" onerror="this.src='/images/product-placeholder.svg';" /><div><b>@i.Product?.Name</b><div class="small text-muted">@i.Product?.SKU</div></div></div></td>
+                    <td>
+                        <form asp-action="Update" method="post" class="d-flex align-items-center gap-2" style="max-width:150px">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@i.ProductId" /><input name="quantity" class="form-control form-control-sm" type="number" min="1" max="@i.Product?.StockQuantity" value="@i.Quantity" /><button class="btn btn-sm btn-outline-dark">Cập nhật</button></form>
+                    </td>
+                    <td>@((i.Product?.SalePrice ?? i.Product?.Price ?? 0m).ToString("N0"))₫</td>
+                    <td><strong>@i.LineTotal.ToString("N0")₫</strong></td>
+                    <td><form asp-action="Remove" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@i.ProductId" /><button class="btn btn-sm btn-outline-danger">Xóa</button></form></td>
+                </tr>
+            }
+            </tbody></table></div>
+        <div class="cart-summary"><div><span>Tạm tính</span><b>@Model.Sum(x => x.LineTotal).ToString("N0")₫</b><small class="text-muted">Phí ship miễn phí từ 500.000₫</small></div><a class="btn btn-dark btn-lg" href="/Orders/Checkout">Tiến hành thanh toán →</a></div>
+    }
+</section>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - LUMIPHUX</title>
+    <meta name="description" content="LUMIPHUX - Chăm sóc sức khỏe & làm đẹp." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<header class="lpx-header">
+    <div class="container py-2 d-flex justify-content-between small text-muted">
+        <span>Miễn phí giao hàng từ 500.000₫</span><span>Hotline: 1900 6868</span>
+    </div>
+    <nav class="navbar navbar-expand-lg bg-white border-top border-bottom">
+        <div class="container py-2">
+            <a class="navbar-brand lpx-logo" href="/"><span>LPX</span> LUMIPHUX</a>
+            <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
+            <div id="mainNav" class="collapse navbar-collapse">
+                <ul class="navbar-nav mx-auto gap-lg-3">
+                    <li class="nav-item"><a class="nav-link" href="/">Trang chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/Shop">Sản phẩm</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#categories">Danh mục</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#bestseller">Best seller</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/Orders/Checkout">Thanh toán</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-3">
+                    <a class="icon-link position-relative" href="/Cart">🛒 <span id="cartBadge" class="cart-badge">0</span></a>
+                    @if (User.IsInRole("Owner"))
+                    {
+                        <a class="icon-link" href="/Admin/Dashboard">Quản trị</a>
+                    }
+                    else if (User.IsInRole("ProductManager"))
+                    {
+                        <a class="icon-link" href="/ProductManager/Products">Sản phẩm</a>
+                    }
+                    else if (User.IsInRole("InventoryManager"))
+                    {
+                        <a class="icon-link" href="/InventoryManager/Inventory">Kho</a>
+                    }
+                    else if (User.IsInRole("CustomerService"))
+                    {
+                        <a class="icon-link" href="/CustomerService/Support">CSKH</a>
+                    }
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a class="icon-link" href="/Orders">Đơn hàng</a>
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="m-0"><button class="nav-link btn btn-link p-0">Đăng xuất</button></form>
+                    }
+                    else
+                    {
+                        <a class="icon-link" href="/Account/Login">Đăng nhập</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<main>
+    <div class="container mt-3">
+        @if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
+        @if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
+    </div>
+    @RenderBody()
+</main>
+
+<footer class="lpx-footer mt-5">
+    <div class="container py-5">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="lpx-logo text-white mb-3"><span>LPX</span> LUMIPHUX</div>
+                <p class="text-white-50">Chăm sóc sức khỏe & làm đẹp theo cách tinh tế hơn.</p>
+                <p class="mb-1">Hotline: 1900 6868</p>
+                <p class="mb-1">Email: cskh@lumiphux.com</p>
+                <p>Địa chỉ: TP. Hồ Chí Minh, Việt Nam</p>
+            </div>
+            <div class="col-md-3 col-lg-2">
+                <h6>Chính sách</h6>
+                <a href="#">Đổi trả</a><a href="#">Giao hàng</a><a href="#">Bảo mật</a><a href="#">Điều khoản</a>
+            </div>
+            <div class="col-md-5 col-lg-6">
+                <h6>Vị trí</h6>
+                <iframe title="LUMIPHUX map" src="https://www.google.com/maps?q=Ho+Chi+Minh+City,+Vietnam&output=embed" width="100%" height="180" style="border:0;border-radius:16px" loading="lazy"></iframe>
+            </div>
+        </div>
+        <hr class="border-light-subtle my-4" />
+        <div class="d-flex justify-content-between flex-wrap gap-2 small"><span>© @DateTime.UtcNow.Year LUMIPHUX (LPX). All rights reserved.</span><span>Health • Beauty • Wellness</span></div>
+    </div>
+</footer>
+
+<!-- AI CHAT -->
+<button id="lpxChatToggle" class="lpx-chat-toggle" aria-label="Mở trợ lý LUMIPHUX">✦</button>
+<div id="lpxChat" class="lpx-chat shadow-lg">
+    <div class="lpx-chat-head"><div><b>LPX Assistant</b><div id="lpxChatMode" class="small opacity-75">AI + CSKH SignalR</div></div><button id="lpxChatClose">×</button></div>
+    <div id="lpxChatBody" class="lpx-chat-body"><div class="chat-bubble bot">Xin chào! Mình có thể tìm sản phẩm, thêm vào giỏ, mở thanh toán và tra cứu đơn hàng cho bạn.</div></div>
+    <div class="lpx-quick"><button data-msg="tìm serum vitamin C">Tìm serum</button><button data-msg="xem giỏ hàng">Giỏ hàng</button><button data-msg="xem đơn hàng của tôi">Đơn hàng</button><button id="lpxHumanSupport" type="button">Gặp CSKH</button></div>
+    <form id="lpxChatForm" class="p-2 border-top d-flex gap-2">@Html.AntiForgeryToken()<input id="lpxChatInput" class="form-control" placeholder="Nhập yêu cầu..." autocomplete="off"/><button class="btn btn-dark">Gửi</button></form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script> AOS.init({ once: true, duration: 650 }); </script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

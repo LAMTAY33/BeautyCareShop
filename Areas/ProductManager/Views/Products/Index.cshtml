@@ -1,0 +1,12 @@
+@model List<BeautyCareShop.Models.Product>
+@{ ViewData["Title"] = "Quản lý sản phẩm"; Layout = "/Views/Shared/_Layout.cshtml"; }
+<section class="container py-5">
+    <div class="section-heading"><div><span class="eyebrow">PRODUCT MANAGER</span><h1>Quản lý sản phẩm</h1></div><a class="btn btn-dark" href="/ProductManager/Products/Create">+ Thêm sản phẩm</a></div>
+    <form class="search-panel row g-2 mb-4" method="get"><div class="col-md-10"><input class="form-control" name="search" value="@ViewBag.Search" placeholder="Tìm theo tên hoặc SKU" /></div><div class="col-md-2"><button class="btn btn-outline-dark w-100">Tìm</button></div></form>
+    <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Ảnh</th><th>SKU</th><th>Tên</th><th>Danh mục</th><th>Giá</th><th>Tồn</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+    @foreach (var p in Model)
+    {
+        <tr><td><img src="@p.ThumbnailUrl" alt="@p.Name" style="width:64px;height:64px;object-fit:cover;border-radius:12px" onerror="this.src='/images/product-placeholder.svg';" /></td><td>@p.SKU</td><td><strong>@p.Name</strong></td><td>@p.Category?.Name</td><td>@((p.SalePrice ?? p.Price).ToString("N0"))₫</td><td>@p.StockQuantity</td><td><span class="status-chip">@(p.IsActive ? "Đang bán" : "Đang ẩn")</span></td><td class="text-end"><a class="btn btn-sm btn-outline-dark" href="/ProductManager/Products/Edit/@p.Id">Sửa</a><form class="d-inline" asp-action="Toggle" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@p.Id" /><button class="btn btn-sm btn-outline-secondary">@(p.IsActive ? "Ẩn" : "Hiện")</button></form></td></tr>
+    }
+    </tbody></table></div>
+</section>

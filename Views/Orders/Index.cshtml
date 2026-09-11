@@ -1,0 +1,93 @@
+@model List<BeautyCareShop.Models.Order>
+@{ ViewData["Title"] = "Đơn hàng của tôi"; }
+<section class="container py-5">
+    <div class="section-heading">
+        <div><span class="eyebrow">MY ORDERS</span><h1>Đơn hàng của tôi</h1></div>
+        <a href="/Shop" class="btn btn-outline-dark">Tiếp tục mua sắm</a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    { <div class="alert alert-success">@TempData["Success"]</div> }
+    @if (TempData["Error"] != null)
+    { <div class="alert alert-danger">@TempData["Error"]</div> }
+
+    @if (Model.Count == 0)
+    {
+        <div class="empty-state order-empty">
+            <div class="empty-emoji">🛍️</div>
+            <h2>Bạn chưa có đơn hàng</h2>
+            <p class="text-muted">Những sản phẩm bạn yêu thích đang chờ bạn.</p>
+            <a class="btn btn-dark" href="/Shop">Khám phá sản phẩm</a>
+        </div>
+    }
+    else
+    {
+        <div class="order-list">
+        @foreach (var order in Model)
+        {
+            var cancelAllowed = order.PaidAt == null && order.Status is "Pending" or "Confirmed";
+            var statusText = order.Status switch
+            {
+                "Confirmed" => "Đã xác nhận",
+                "Pending" => "Chờ thanh toán",
+                "Preparing" => "Đang chuẩn bị",
+                "Shipping" => "Đang giao",
+                "Delivered" => "Đã giao",
+                "Cancelled" => "Đã hủy",
+                "PaymentExpired" => "Hết hạn thanh toán",
+                _ => order.Status
+            };
+            <article class="order-card mb-3">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div>
+                        <span class="eyebrow">@order.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                        <h4 class="mt-1 mb-1">@order.OrderCode</h4>
+                        <p class="text-muted mb-0">@order.Items.Count sản phẩm • @order.PaymentMethod</p>
+                    </div>
+                    <div class="text-end">
+                        <span class="order-status order-status-@order.Status.ToLowerInvariant()">@statusText</span>
+                        <div class="order-total mt-2">@order.TotalAmount.ToString("N0")₫</div>
+                    </div>
+                </div>
+
+                <div class="order-actions mt-3">
+                    <a class="btn btn-sm btn-dark" href="/Orders/Details/@order.Id">Xem chi tiết</a>
+                    @if (order.PaymentMethod != "COD" && order.PaidAt == null && order.Status != "PaymentExpired")
+                    { <a class="btn btn-sm btn-outline-dark" href="/Orders/Payment/@order.Id">Thanh toán</a> }
+                    @if (cancelAllowed)
+                    {
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancel-@order.Id">Hủy đơn</button>
+                    }
+                </div>
+
+                @if (cancelAllowed)
+                {
+                    <div class="modal fade" id="cancel-@order.Id" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header"><h5 class="modal-title">Hủy đơn @order.OrderCode</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                <form asp-action="Cancel" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@order.Id" />
+                                    <div class="modal-body">
+                                        <p class="text-muted">Chọn lý do để LUMIPHUX cải thiện trải nghiệm:</p>
+                                        @foreach (var reason in new[] { "Đổi địa chỉ giao hàng", "Đổi phương thức thanh toán", "Không muốn mua nữa", "Đặt nhầm sản phẩm", "Tìm được sản phẩm khác", "Lý do khác" })
+                                        {
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="radio" name="reason" value="@reason" required />
+                                                <label class="form-check-label">@reason</label>
+                                            </div>
+                                        }
+                                        <textarea name="otherReason" class="form-control mt-3" rows="3" placeholder="Mô tả thêm (không bắt buộc)"></textarea>
+                                    </div>
+                                    <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button><button type="submit" class="btn btn-danger">Xác nhận hủy</button></div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </article>
+        }
+        </div>
+    }
+</section>

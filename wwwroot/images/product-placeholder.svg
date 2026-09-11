@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4efe9"/><stop offset="1" stop-color="#e3d9cf"/></linearGradient></defs>
+<rect width="800" height="800" fill="url(#g)"/><circle cx="400" cy="285" r="105" fill="#dfd2c5"/><rect x="270" y="420" width="260" height="100" rx="28" fill="#bfae9d"/><text x="400" y="590" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" fill="#526157">LUMIPHUX</text><text x="400" y="635" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#7f766f">HEALTH • BEAUTY • WELLNESS</text>
+</svg>

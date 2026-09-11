@@ -1,0 +1,379 @@
+@using BeautyCareShop.Models
+@{
+    ViewData["Title"] = "LUMIPHUX";
+    var products = ViewBag.Featured as List<Product> ?? [];
+    var categories = ViewBag.Categories as List<Category> ?? [];
+}
+
+<style>
+    /* Bổ sung style hiển thị đồng bộ cho Hero Carousel & Benefits */
+    .lpx-hero-slide {
+        min-height: 520px;
+        display: flex;
+        align-items: center;
+        padding: 60px 40px;
+        background-size: cover;
+        background-position: center right;
+        background-repeat: no-repeat;
+        border-radius: 20px;
+        position: relative;
+    }
+
+    .slide-one {
+        background-color: #f6f3ee;
+        background-image: linear-gradient(to right, rgba(246, 243, 238, 0.95) 45%, rgba(246, 243, 238, 0.3) 100%), url('https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=80');
+    }
+
+    .slide-two {
+        background-color: #2b2b2b;
+        background-image: linear-gradient(to right, rgba(0,0,0,0.8) 40%, rgba(0,0,0,0.2) 100%), url('https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=1200&q=80');
+    }
+
+    .slide-three {
+        background-color: #1f2e24;
+        background-image: linear-gradient(to right, rgba(0,0,0,0.8) 40%, rgba(0,0,0,0.2) 100%), url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80');
+    }
+
+    .hero-copy {
+        max-width: 580px;
+        z-index: 2;
+    }
+
+        .hero-copy .eyebrow {
+            letter-spacing: 2px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8c7355;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .hero-copy h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 16px;
+        }
+
+        .hero-copy.light-copy h1, .hero-copy.light-copy p {
+            color: #ffffff;
+        }
+
+        .hero-copy.light-copy .eyebrow {
+            color: #e3c49e;
+        }
+
+    /* Benefits Grid */
+    .lpx-benefits {
+        background-color: #fbfaf8;
+        padding: 30px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .benefits-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 24px;
+    }
+
+    .benefit-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .benefit-num {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #b59f7d;
+        line-height: 1.2;
+    }
+
+    .benefit-content strong {
+        display: block;
+        font-size: 0.98rem;
+        color: #1f1f1f;
+        margin-bottom: 3px;
+    }
+
+    .benefit-content small {
+        display: block;
+        color: #6c757d;
+        font-size: 0.84rem;
+        line-height: 1.4;
+    }
+
+    /* Section Headings */
+    .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 2rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+        .section-heading p {
+            margin-bottom: 0;
+            color: #6c757d;
+        }
+</style>
+
+@if (TempData["PaymentSuccess"] != null)
+{
+    <div id="successToast" class="lpx-success-toast">
+        <div class="success-mark">✓</div>
+        <div>
+            <b>Thanh toán thành công</b>
+            <div>@TempData["PaymentSuccess"]</div>
+            <small>Đang chuẩn bị trang chủ...</small>
+        </div>
+    </div>
+    <script>setTimeout(() => document.getElementById('successToast')?.classList.add('hide'), 4500);</script>
+}
+
+<!-- Hero Carousel -->
+<section class="lpx-hero-carousel container py-3" data-aos="fade-up">
+    <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"></button>
+            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
+            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"></button>
+        </div>
+        <div class="carousel-inner rounded-4 shadow-sm">
+            <div class="carousel-item active">
+                <div class="lpx-hero-slide slide-one">
+                    <div class="hero-copy">
+                        <span class="eyebrow">LUMIPHUX • LPX</span>
+                        <h1>Đẹp hơn mỗi ngày.<br /><em>Khỏe mạnh từ bên trong.</em></h1>
+                        <p>Khám phá bộ sưu tập Health & Beauty Care được tuyển chọn cho nhịp sống hiện đại.</p>
+                        <a class="btn btn-dark btn-lg px-4 mt-2" href="/Shop">Mua sắm ngay</a>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-item">
+                <div class="lpx-hero-slide slide-two">
+                    <div class="hero-copy light-copy">
+                        <span class="eyebrow">GLOW SEASON</span>
+                        <h1>Routine dịu dàng<br /><em>cho làn da rạng rỡ.</em></h1>
+                        <p>Serum, kem dưỡng và chống nắng cho chu trình chăm sóc đơn giản hơn.</p>
+                        <a class="btn btn-light btn-lg px-4 mt-2" href="/Shop?category=cham-soc-da">Khám phá skincare</a>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-item">
+                <div class="lpx-hero-slide slide-three">
+                    <div class="hero-copy light-copy">
+                        <span class="eyebrow">WELLNESS EDIT</span>
+                        <h1>Nuôi dưỡng<br /><em>từ bên trong.</em></h1>
+                        <p>Vitamin, collagen và các sản phẩm wellness cho lối sống chủ động.</p>
+                        <a class="btn btn-light btn-lg px-4 mt-2" href="/Shop?category=vitamin-thuc-pham-bo-sung">Khám phá wellness</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+        </button>
+    </div>
+</section>
+
+<!-- Benefits Section -->
+<section class="lpx-benefits my-4">
+    <div class="container">
+        <div class="benefits-grid">
+            <div class="benefit-item">
+                <span class="benefit-num">01</span>
+                <div class="benefit-content">
+                    <strong>Giao hàng nhanh</strong>
+                    <small>Đóng gói cẩn thận, giao tận nơi.</small>
+                </div>
+            </div>
+            <div class="benefit-item">
+                <span class="benefit-num">02</span>
+                <div class="benefit-content">
+                    <strong>Tuyển chọn kỹ</strong>
+                    <small>Danh mục tập trung Health & Beauty.</small>
+                </div>
+            </div>
+            <div class="benefit-item">
+                <span class="benefit-num">03</span>
+                <div class="benefit-content">
+                    <strong>Hỗ trợ thông minh</strong>
+                    <small>AI + CSKH người thật.</small>
+                </div>
+            </div>
+            <div class="benefit-item">
+                <span class="benefit-num">04</span>
+                <div class="benefit-content">
+                    <strong>Theo dõi rõ ràng</strong>
+                    <small>Đơn hàng và thanh toán minh bạch.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section id="categories" class="container py-5 my-4">
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow text-uppercase text-muted small fw-bold">SHOP BY CATEGORY</span>
+            <h2 class="fw-bold mb-1">Khám phá danh mục</h2>
+        </div>
+        <p class="text-secondary">Chọn nhóm sản phẩm phù hợp với nhu cầu chăm sóc của bạn.</p>
+    </div>
+    <div class="row g-4">
+        @foreach (var item in categories.Take(3).Select((c, i) => new { Category = c, Index = i }))
+        {
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="@(item.Index * 80)">
+                <a class="category-card" href="/Shop?category=@item.Category.Slug">
+                    <img src="@item.Category.ImageUrl" alt="@item.Category.Name" loading="lazy" onerror="this.src='/images/category-placeholder.svg';" />
+                    <div class="category-overlay"></div>
+                    <div class="category-caption">
+                        <span>@((item.Index + 1).ToString("00"))</span>
+                        <h3>@item.Category.Name</h3>
+                        <p>Khám phá bộ sưu tập</p>
+                        <strong>Xem sản phẩm →</strong>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Best Seller Section -->
+<section id="bestseller" class="container py-5">
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow text-uppercase text-muted small fw-bold">BEST SELLER</span>
+            <h2 class="fw-bold mb-0">Sản phẩm nổi bật</h2>
+        </div>
+        <a href="/Shop" class="view-all fw-semibold text-decoration-none text-dark">Xem tất cả →</a>
+    </div>
+    <div class="row g-4">
+        @foreach (var p in products)
+        {
+            <div class="col-sm-6 col-lg-3" data-aos="fade-up">
+                <article class="product-card">
+                    <div class="product-image">
+                        <span class="badge-lpx">@(p.SalePrice.HasValue ? "SALE" : "LPX")</span>
+                        <a href="/Shop/Details?slug=@p.Slug">
+                            <img src="@p.ThumbnailUrl" alt="@p.Name" loading="lazy" onerror="this.src='/images/product-placeholder.svg';" />
+                        </a>
+                    </div>
+                    <div class="product-body">
+                        <small class="text-muted">@p.Category?.Name</small>
+                        <h3 class="fs-6 mt-1 mb-2"><a href="/Shop/Details?slug=@p.Slug" class="text-dark text-decoration-none">@p.Name</a></h3>
+                        <div class="stars text-warning small mb-1">★★★★★ <span class="text-muted">(@p.ReviewCount)</span></div>
+                        <div class="price fw-bold mb-2">
+                            @((p.SalePrice ?? p.Price).ToString("N0"))₫
+                            @if (p.SalePrice.HasValue)
+                            {
+                                <del class="text-muted small fw-normal ms-1">@p.Price.ToString("N0")₫</del>
+                            }
+                        </div>
+                        <form asp-controller="Cart" asp-action="Add" method="post" class="mt-auto">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="productId" value="@p.Id" />
+                            <button class="btn btn-dark w-100" type="submit" @(p.StockQuantity <= 0 ? "disabled" : null)>
+                                @(p.StockQuantity <= 0 ? "Hết hàng" : "Thêm vào giỏ")
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Flash Sale -->
+<section class="container py-5">
+    <div class="flash-box" data-aos="zoom-in">
+        <div>
+            <span class="eyebrow">FLASH SALE</span>
+            <h2>Ưu đãi đến 30%</h2>
+            <p class="text-muted">Đơn QR/thẻ được giữ tồn kho trong 10 phút để bạn hoàn tất thanh toán.</p>
+            <a class="btn btn-dark" href="/Shop">Săn deal</a>
+        </div>
+        <div>
+            <div class="countdown-label">KẾT THÚC TRONG</div>
+            <div class="countdown" id="flashCountdown">10:00</div>
+        </div>
+    </div>
+</section>
+
+<!-- Review Panel -->
+<section class="container py-5">
+    <div class="review-panel" data-aos="fade-up">
+        <div>
+            <span class="eyebrow">CUSTOMER LOVE</span>
+            <h2>“Chăm sóc bản thân nên là một niềm vui.”</h2>
+            <div class="stars mt-3 text-warning">★★★★★</div>
+        </div>
+        <blockquote>
+            “Đóng gói đẹp, giao diện dễ dùng và chatbot hỗ trợ tìm sản phẩm cực nhanh.”
+            <footer class="mt-2">— Khách hàng LUMIPHUX</footer>
+        </blockquote>
+    </div>
+</section>
+
+<!-- Journal -->
+<section class="container py-5">
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow text-uppercase text-muted small fw-bold">LUMIPHUX JOURNAL</span>
+            <h2 class="fw-bold mb-0">Mẹo đẹp & wellness</h2>
+        </div>
+    </div>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <article class="journal-card" data-aos="fade-up">
+                <img src="https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=700&q=80" alt="Skincare" />
+                <div>
+                    <span>SKINCARE</span>
+                    <h3>3 bước phục hồi hàng rào bảo vệ da</h3>
+                    <p>Giữ routine đơn giản, đều đặn và phù hợp.</p>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="journal-card" data-aos="fade-up" data-aos-delay="70">
+                <img src="https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=700&q=80" alt="Beauty" />
+                <div>
+                    <span>BEAUTY</span>
+                    <h3>Cách xây routine buổi sáng gọn nhẹ</h3>
+                    <p>Ít bước hơn nhưng đúng thứ tự.</p>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="journal-card" data-aos="fade-up" data-aos-delay="140">
+                <img src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=700&q=80" alt="Wellness" />
+                <div>
+                    <span>WELLNESS</span>
+                    <h3>Chăm sóc sức khỏe từ những thói quen nhỏ</h3>
+                    <p>Ăn đủ, ngủ đủ và vận động đều đặn.</p>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<script>
+    (() => {
+        let end = Date.now() + 600000;
+        const update = () => {
+            const diff = Math.max(0, end - Date.now());
+            const m = Math.floor(diff / 60000), s = Math.floor(diff / 1000) % 60;
+            const e = document.getElementById('flashCountdown');
+            if (e) e.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            if (diff > 0) requestAnimationFrame(update); else if (e) e.textContent = '00:00';
+        };
+        update();
+    })();
+</script>

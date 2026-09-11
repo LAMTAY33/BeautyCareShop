@@ -1,0 +1,37 @@
+@model List<BeautyCareShop.Models.Product>
+@{ ViewData["Title"]="Quản lý kho"; Layout="/Views/Shared/_Layout.cshtml"; }
+<section class="container py-5">
+    <div class="section-heading">
+        <div><span class="eyebrow">INVENTORY</span><h1>Kho hàng</h1></div>
+    </div>
+    @if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
+    @if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
+    <div class="table-responsive mt-4">
+        <table class="table align-middle">
+            <thead><tr><th>SKU</th><th>Sản phẩm</th><th>Tồn</th><th>Mức cảnh báo</th><th>Trạng thái</th><th>Điều chỉnh</th></tr></thead>
+            <tbody>
+            @foreach (var p in Model)
+            {
+                var low = p.StockQuantity <= p.MinimumStockLevel;
+                <tr>
+                    <td>@p.SKU</td>
+                    <td><strong>@p.Name</strong></td>
+                    <td><strong>@p.StockQuantity</strong></td>
+                    <td>@p.MinimumStockLevel</td>
+                    <td><span class="status-chip">@(p.StockQuantity == 0 ? "Hết hàng" : low ? "Sắp hết" : "Còn hàng")</span></td>
+                    <td>
+                        <form asp-action="Adjust" method="post" class="inventory-adjust-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ProductId" value="@p.Id" />
+                            <select name="Type" class="form-select form-select-sm"><option value="IN">Nhập</option><option value="OUT">Xuất</option><option value="ADJUSTMENT">Cộng</option></select>
+                            <input name="Quantity" class="form-control form-control-sm" type="number" min="1" value="1" />
+                            <input name="Reason" class="form-control form-control-sm" placeholder="Lý do" required />
+                            <button class="btn btn-sm btn-dark">Lưu</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

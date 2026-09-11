@@ -1,0 +1,71 @@
+@model BeautyCareShop.Models.Order
+@{ ViewData["Title"] = "Thanh toán đơn " + Model.OrderCode; }
+<section class="container py-5">
+    <div class="row g-4 justify-content-center">
+        <div class="col-xl-8">
+            <div class="payment-card" data-aos="fade-up">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div><span class="eyebrow">SECURE PAYMENT</span><h1>Thanh toán @Model.OrderCode</h1><p class="text-muted mb-0">Số tiền cần thanh toán: <strong>@Model.TotalAmount.ToString("N0")₫</strong></p></div>
+                    <div id="deadline" class="payment-timer">10:00</div>
+                </div>
+
+                @if (Model.Status == "PaymentExpired")
+                {
+                    <div class="alert alert-danger mt-4">Đơn hàng đã hết thời gian thanh toán.</div>
+                    <a class="btn btn-dark" href="/Orders">Quay lại đơn hàng</a>
+                }
+                else if (Model.PaymentMethod == "QR")
+                {
+                    <div class="qr-payment mt-4">
+                        <div class="qr-provider">Kênh thanh toán: <strong>@ViewBag.PaymentProvider</strong></div>
+                        <img src="@ViewBag.QrUrl" class="qr-img" alt="Mã QR thanh toán LUMIPHUX" />
+                        <h4>@Model.TotalAmount.ToString("N0")₫</h4>
+                        <p class="text-muted">Nội dung chuyển khoản: <strong>@Model.OrderCode LUMIPHUX</strong></p>
+                        <a href="@ViewBag.DeepLink" class="btn btn-outline-dark mb-2">Mở ứng dụng thanh toán</a>
+                        <form asp-action="ConfirmQrPayment" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <input type="hidden" name="provider" value="@ViewBag.PaymentProvider" />
+                            <button class="btn btn-dark btn-lg px-4">Tôi đã thanh toán QR</button>
+                        </form>
+                        <small class="text-muted d-block mt-3">Bản demo xác nhận bằng nút trên. Production nên xác nhận qua webhook/callback của cổng thanh toán.</small>
+                    </div>
+                }
+                else if (Model.PaymentMethod == "Card")
+                {
+                    <form asp-action="PayByCard" method="post" class="mt-4">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="OrderId" value="@Model.Id" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        <div class="mb-3"><label class="form-label">Tên chủ thẻ</label><input name="CardHolder" class="form-control form-control-lg" autocomplete="cc-name" required /></div>
+                        <div class="mb-3"><label class="form-label">Số thẻ demo</label><input name="CardNumber" class="form-control form-control-lg" placeholder="4242 4242 4242 4242" autocomplete="cc-number" required /></div>
+                        <div class="row g-3"><div class="col-6"><label class="form-label">MM/YY</label><input name="Expiry" class="form-control" placeholder="12/30" autocomplete="cc-exp" required /></div><div class="col-6"><label class="form-label">CVV</label><input name="CVV" class="form-control" placeholder="123" autocomplete="cc-csc" required /></div></div>
+                        <button class="btn btn-dark btn-lg w-100 mt-4">Thanh toán @Model.TotalAmount.ToString("N0")₫</button>
+                        <small class="text-muted d-block mt-3">Demo chỉ kiểm tra Luhn; không lưu số thẻ hoặc CVV.</small>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+@section Scripts {
+<script>
+(() => {
+    const deadline = '@ViewBag.Deadline';
+    const el = document.getElementById('deadline');
+    if (!deadline || !el) return;
+    const end = new Date(deadline).getTime();
+    const timer = setInterval(() => {
+        const diff = Math.max(0, end - Date.now());
+        const min = Math.floor(diff / 60000);
+        const sec = Math.floor(diff / 1000) % 60;
+        el.textContent = String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+        if (diff <= 0) {
+            clearInterval(timer);
+            alert('Đã hết 10 phút thanh toán.');
+            location.href = '/Orders';
+        }
+    }, 1000);
+})();
+</script>
+}

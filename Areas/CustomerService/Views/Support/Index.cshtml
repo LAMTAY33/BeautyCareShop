@@ -1,0 +1,22 @@
+@model List<BeautyCareShop.Models.SupportMessage>
+@{ ViewData["Title"]="CSKH & Live Chat"; Layout="/Views/Shared/_Layout.cshtml"; }
+<section class="container py-5">
+    <div class="section-heading"><div><span class="eyebrow">CUSTOMER SERVICE</span><h1>CSKH & Live Chat</h1></div><span class="status-chip">SignalR đang sẵn sàng</span></div>
+    <p class="text-muted">Theo dõi hội thoại và phản hồi khách hàng. Widget chat ở góc phải dùng cùng SignalR Hub.</p>
+    <div id="staffLiveChat" class="chat-admin mt-4"></div>
+    <form asp-action="Reply" method="post" class="d-flex gap-2 mt-3">@Html.AntiForgeryToken()<input name="Message" class="form-control" placeholder="Trả lời khách hàng..." /><button class="btn btn-dark">Gửi</button></form>
+    <div class="mt-4"><h5>Lịch sử hỗ trợ</h5>@foreach(var x in Model){<div class="chat-admin-row"><b>@x.SenderType</b><span>@x.Message</span><small>@x.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</small></div>}</div>
+</section>
+@section Scripts {
+<script>
+(async () => {
+    if (!window.signalR) return;
+    const c = new signalR.HubConnectionBuilder().withUrl('/hubs/support').withAutomaticReconnect().build();
+    c.on('ReceiveMessage', (sender, message, time) => {
+        const box = document.getElementById('staffLiveChat');
+        const row = document.createElement('div'); row.className='chat-admin-row'; row.innerHTML = `<b>${sender}</b><span>${message}</span><small>${time}</small>`; box.prepend(row);
+    });
+    await c.start(); await c.invoke('JoinSupport');
+})();
+</script>
+}
