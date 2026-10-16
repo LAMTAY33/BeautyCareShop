@@ -1,6 +1,8 @@
 using BeautyCareShop.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BeautyCareShop.Data;
 
@@ -11,18 +13,34 @@ public static class SeedData
         var db = services.GetRequiredService<ApplicationDbContext>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+        var configuration = services.GetRequiredService<IConfiguration>();
 
+        // 1. Khởi tạo các Role mặc định trong hệ thống
         string[] roles = ["Owner", "ProductManager", "InventoryManager", "CustomerService", "Customer"];
         foreach (var role in roles)
-            if (!await roleManager.RoleExistsAsync(role)) await roleManager.CreateAsync(new IdentityRole(role));
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole(role));
+            }
+        }
 
-        await EnsureUser(userManager, "tanloc270103@gmail.com", "duylam@#2910", "Chủ sở hữu LUMIPHUX", "Owner");
-        await EnsureUser(userManager, "nguyenhoangphuc230406@gmail.com", "Babyimlit@06", "Chủ sở hữu LUMIPHUX", "Owner");
-        await EnsureUser(userManager, "abc123@gmail.com", "Abc456@", "Quản lý sản phẩm", "ProductManager");
+        // 2. TỰ ĐỘNG TẠO TÀI KHOẢN TỪ SECRETS.JSON (BẢO MẬT TUYỆT ĐỐI)
+        var adminEmail = configuration["SuperAdmin:Email"];
+        var adminPassword = configuration["SuperAdmin:Password"];
+        var adminFullName = configuration["SuperAdmin:FullName"] ?? "Chủ sở hữu LUMIPHUX";
+
+        if (!string.IsNullOrEmpty(adminEmail) && !string.IsNullOrEmpty(adminPassword))
+        {
+            await EnsureUser(userManager, adminEmail, adminPassword, adminFullName, "Owner");
+        }
+
+        // 3. TÀI KHOẢN MẪU DÙNG CHUNG ĐỂ TEST CHỨC NĂNG
         await EnsureUser(userManager, "warehouse@lumiphux.com", "Warehouse@123456", "Quản lý kho", "InventoryManager");
         await EnsureUser(userManager, "cskh@lumiphux.com", "Cskh@123456", "CSKH LUMIPHUX", "CustomerService");
         await EnsureUser(userManager, "customer@lumiphux.com", "Customer@123456", "Khách hàng mẫu", "Customer");
 
+        // 4. Gieo danh mục nếu chưa có
         if (!await db.Categories.AnyAsync())
         {
             var categories = new[]
@@ -37,6 +55,7 @@ public static class SeedData
             await db.SaveChangesAsync();
         }
 
+        // 5. Gieo dữ liệu sản phẩm mẫu nếu chưa có
         if (!await db.Products.AnyAsync())
         {
             var cat = await db.Categories.ToDictionaryAsync(x => x.Slug);
@@ -59,7 +78,9 @@ public static class SeedData
             await db.SaveChangesAsync();
 
             foreach (var p in products)
+            {
                 db.ProductImages.Add(new ProductImage { ProductId = p.Id, Url = p.ThumbnailUrl!, IsPrimary = true });
+            }
 
             db.Vouchers.AddRange(
                 new Voucher { Code = "LPX10", DiscountType = "Percentage", DiscountValue = 10, MaximumDiscount = 100000, MinimumOrderValue = 300000, StartDate = DateTime.UtcNow.AddDays(-1), EndDate = DateTime.UtcNow.AddMonths(1), UsageLimit = 100 },
@@ -71,14 +92,24 @@ public static class SeedData
 
     private static Product P(string sku, string name, string slug, decimal price, decimal? sale, int stock, int categoryId, string image, bool featured) => new()
     {
-        SKU = sku, Name = name, Slug = slug, Price = price, SalePrice = sale, CostPrice = price * .55m,
-        StockQuantity = stock, MinimumStockLevel = 5, CategoryId = categoryId, ThumbnailUrl = image,
+        SKU = sku,
+        Name = name,
+        Slug = slug,
+        Price = price,
+        SalePrice = sale,
+        CostPrice = price * .55m,
+        StockQuantity = stock,
+        MinimumStockLevel = 5,
+        CategoryId = categoryId,
+        ThumbnailUrl = image,
         ShortDescription = "Sản phẩm LUMIPHUX dành cho chăm sóc sức khỏe và sắc đẹp mỗi ngày.",
         Description = "Thông tin mô tả sản phẩm mẫu. Khi vận hành thực tế, Product Manager có thể chỉnh sửa nội dung này.",
         Ingredients = "Vui lòng xem bảng thành phần trên bao bì và hướng dẫn của nhà sản xuất.",
         Usage = "Sử dụng theo hướng dẫn trên nhãn sản phẩm.",
         Warnings = "Không sử dụng nếu bạn dị ứng với bất kỳ thành phần nào. Với thực phẩm bổ sung, không dùng thay thế thuốc chữa bệnh.",
-        IsFeatured = featured, IsNew = true, IsActive = true
+        IsFeatured = featured,
+        IsNew = true,
+        IsActive = true
     };
 
     private static async Task EnsureUser(UserManager<ApplicationUser> userManager, string email, string password, string name, string role)
@@ -89,6 +120,9 @@ public static class SeedData
             user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true, FullName = name };
             await userManager.CreateAsync(user, password);
         }
-        if (!await userManager.IsInRoleAsync(user, role)) await userManager.AddToRoleAsync(user, role);
+        if (!await userManager.IsInRoleAsync(user, role))
+        {
+            await userManager.AddToRoleAsync(user, role);
+        }
     }
 }

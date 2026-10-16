@@ -1,4 +1,4 @@
-using BeautyCareShop.Data;
+﻿using BeautyCareShop.Data;
 using BeautyCareShop.Hubs;
 using BeautyCareShop.Models;
 using BeautyCareShop.Services;
@@ -43,6 +43,9 @@ builder.Services.AddScoped<IAssistantService, SiteAssistantService>();
 builder.Services.AddScoped<IPaymentService, DemoPaymentService>();
 builder.Services.AddScoped<IEmailService, LoggingEmailService>();
 
+// Đăng ký dịch vụ chạy ngầm tự động quét và hoàn tồn kho khi hết hạn thanh toán
+builder.Services.AddHostedService<OrderExpirationWorker>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -50,8 +53,16 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var db = services.GetRequiredService<ApplicationDbContext>();
     await db.Database.EnsureCreatedAsync();
-    // Keep the starter project friendly to databases created by older ZIP versions.
-    await db.Database.ExecuteSqlRawAsync("IF COL_LENGTH('Orders', 'InventoryReleasedAt') IS NULL ALTER TABLE Orders ADD InventoryReleasedAt datetime2 NULL;");
+
+    // Tự động kiểm tra và bổ sung các cột cần thiết cho Orders nếu chưa có
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF COL_LENGTH('Orders', 'InventoryReleasedAt') IS NULL ALTER TABLE Orders ADD InventoryReleasedAt datetime2 NULL;
+        IF COL_LENGTH('Orders', 'PaymentDeadline') IS NULL ALTER TABLE Orders ADD PaymentDeadline datetime2 NULL;
+        IF COL_LENGTH('Orders', 'PaidAt') IS NULL ALTER TABLE Orders ADD PaidAt datetime2 NULL;
+        IF COL_LENGTH('Orders', 'CancelledAt') IS NULL ALTER TABLE Orders ADD CancelledAt datetime2 NULL;
+        IF COL_LENGTH('Orders', 'CancellationReason') IS NULL ALTER TABLE Orders ADD CancellationReason nvarchar(500) NULL;
+    ");
+
     await SeedData.InitializeAsync(services);
 }
 

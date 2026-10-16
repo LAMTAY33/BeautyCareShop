@@ -1,0 +1,89 @@
+﻿@model IEnumerable<BeautyCareShop.Models.Order>
+@{
+    ViewData["Title"] = "Quản lý đơn hàng";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0 fw-bold">Danh sách đơn hàng</h2>
+        <div class="btn-group">
+            <a href="/Admin/Orders" class="btn btn-outline-dark @(ViewBag.CurrentStatus == null ? "active" : "")">Tất cả</a>
+            <a href="/Admin/Orders?status=Pending" class="btn btn-outline-warning @(ViewBag.CurrentStatus == "Pending" ? "active" : "")">Chờ thanh toán</a>
+            <a href="/Admin/Orders?status=Confirmed" class="btn btn-outline-success @(ViewBag.CurrentStatus == "Confirmed" ? "active" : "")">Đã xác nhận</a>
+            <a href="/Admin/Orders?status=PaymentExpired" class="btn btn-outline-danger @(ViewBag.CurrentStatus == "PaymentExpired" ? "active" : "")">Hết hạn/Hủy</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">@TempData["Error"]</div>
+    }
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Khách hàng</th>
+                        <th>Phương thức</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th class="text-end">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var o in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">@o.OrderCode</td>
+                            <td>
+                                <div>@o.CustomerName</div>
+                                <small class="text-muted">@o.Phone</small>
+                            </td>
+                            <td><span class="badge bg-secondary">@o.PaymentMethod</span></td>
+                            <td class="fw-semibold">@o.TotalAmount.ToString("N0")₫</td>
+                            <td>
+                                @if (o.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning text-dark">Chờ thanh toán</span>
+                                }
+                                else if (o.Status == "Confirmed")
+                                {
+                                    <span class="badge bg-success">Đã thanh toán / Xác nhận</span>
+                                }
+                                else if (o.Status == "PaymentExpired")
+                                {
+                                    <span class="badge bg-danger">Hết hạn thanh toán</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@o.Status</span>
+                                }
+                            </td>
+                            <td>@o.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-2">
+                                    @if (o.Status == "Pending" && o.PaidAt == null)
+                                    {
+                                        <form asp-action="ManualConfirmPayment" method="post" onsubmit="return confirm('Bạn xác nhận tài khoản đã nhận được tiền cho đơn này?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@o.Id" />
+                                            <button type="submit" class="btn btn-sm btn-success">✓ Đã nhận tiền</button>
+                                        </form>
+                                    }
+                                    <a href="/Admin/Orders/Details/@o.Id" class="btn btn-sm btn-outline-secondary">Chi tiết</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

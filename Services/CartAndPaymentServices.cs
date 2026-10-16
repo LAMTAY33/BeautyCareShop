@@ -85,7 +85,6 @@ public class SessionCartService(IHttpContextAccessor accessor, ApplicationDbCont
         Session.SetString(Key, JsonSerializer.Serialize(ids));
     }
 
-
     public Task ClearAsync()
     {
         Session.Remove(Key);
@@ -104,24 +103,69 @@ public sealed class DemoPaymentService(IConfiguration configuration) : IPaymentS
 {
     public string BuildQrUrl(string orderCode, decimal amount, string provider)
     {
-        var accountName = configuration["Payment:QrAccountName"] ?? "LUMIPHUX";
-        var accountNo = configuration["Payment:QrAccountNumber"] ?? "0123456789";
-        var bank = configuration["Payment:QrBankBin"] ?? "970436";
+        var amountLong = (long)amount;
         var addInfo = Uri.EscapeDataString($"{orderCode} LUMIPHUX");
-        var encodedName = Uri.EscapeDataString(accountName);
 
-        // VietQR image API-style URL. Provider is retained in the payload for demo UX.
-        return $"https://img.vietqr.io/image/{bank}-{accountNo}-compact2.png?amount={amount:0}&addInfo={addInfo}&accountName={encodedName}&provider={Uri.EscapeDataString(provider)}";
+        switch (provider?.Trim().ToUpper())
+        {
+            case "MOMO":
+                {
+                    var phone = configuration["Payment:MoMo:PhoneNumber"]
+                                ?? configuration["Payment:QrAccountNumber"]
+                                ?? "0987654321";
+                    var name = configuration["Payment:MoMo:AccountName"]
+                               ?? configuration["Payment:QrAccountName"]
+                               ?? "DO DUY LAM";
+
+                    var momoPayload = $"2|99|{phone}|{name}||0|0|{amountLong}|{orderCode}|transfer_myqr";
+                    return $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={Uri.EscapeDataString(momoPayload)}";
+                }
+
+            case "ZALOPAY":
+                {
+                    var phone = configuration["Payment:ZaloPay:PhoneNumber"]
+                                ?? configuration["Payment:QrAccountNumber"]
+                                ?? "0987654321";
+                    var zaloPayload = $"https://zalopay.vn/pay?phone={phone}&amount={amountLong}&message={addInfo}";
+                    return $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={Uri.EscapeDataString(zaloPayload)}";
+                }
+
+            case "SHOPEEPAY":
+                {
+                    var phone = configuration["Payment:ShopeePay:PhoneNumber"]
+                                ?? configuration["Payment:QrAccountNumber"]
+                                ?? "0987654321";
+                    var shopeePayload = $"https://shopeepay.vn/pay?phone={phone}&amount={amountLong}&note={addInfo}";
+                    return $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={Uri.EscapeDataString(shopeePayload)}";
+                }
+
+            case "VIETQR":
+            default:
+                {
+                    // Ưu tiên BankCode (MB, VCB, ACB...) hoặc BIN ngân hàng
+                    var bank = configuration["Payment:Bank:BankCode"]
+                               ?? configuration["Payment:Bank:Bin"]
+                               ?? configuration["Payment:QrBankBin"]
+                               ?? "MB";
+
+                    var accountNo = configuration["Payment:Bank:AccountNumber"]
+                                    ?? configuration["Payment:QrAccountNumber"]
+                                    ?? "0987654321";
+
+                    // URL chuẩn VietQR tối giản, không kèm accountName gây lỗi HTTP 400
+                    return $"https://img.vietqr.io/image/{bank}-{accountNo}-compact2.png?amount={amountLong}&addInfo={addInfo}";
+                }
+        }
     }
 
     public string GetDeepLink(string orderCode, decimal amount, string provider)
     {
         var payload = Uri.EscapeDataString($"{orderCode}|{amount:0}|LUMIPHUX");
-        return provider switch
+        return provider?.Trim().ToUpper() switch
         {
-            "MoMo" => $"momo://app?action=transfer&note={payload}&amount={amount:0}",
-            "ZaloPay" => $"zalopay://app/transfer?amount={amount:0}&note={payload}",
-            "ShopeePay" => $"shopeepay://payment?amount={amount:0}&note={payload}",
+            "MOMO" => $"momo://app?action=transfer&note={payload}&amount={amount:0}",
+            "ZALOPAY" => $"zalopay://app/transfer?amount={amount:0}&note={payload}",
+            "SHOPEEPAY" => $"shopeepay://payment?amount={amount:0}&note={payload}",
             _ => $"bankapp://transfer?amount={amount:0}&note={payload}"
         };
     }

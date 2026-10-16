@@ -94,21 +94,10 @@ public class OrdersController(
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         try
         {
-            // Reload current stock inside the transaction to reduce overselling races.
-            foreach (var item in items)
-            {
-                var current = await db.Products.FirstAsync(p => p.Id == item.ProductId);
-                if (!current.IsActive || current.DeletedAt != null || current.StockQuantity < item.Quantity)
-                {
-                    ModelState.AddModelError(string.Empty, $"Sản phẩm {current.Name} vừa thay đổi tồn kho. Vui lòng kiểm tra lại giỏ hàng.");
-                    await tx.RollbackAsync();
-                    return View(model);
-                }
-            }
-
+            var nowUtc = DateTime.UtcNow;
             var order = new Order
             {
-                OrderCode = $"LPX{DateTime.UtcNow:yyMMddHHmmssfff}{Random.Shared.Next(10, 99)}",
+                OrderCode = $"LPX{nowUtc:yyMMddHHmmssfff}{Random.Shared.Next(10, 99)}",
                 UserId = users.GetUserId(User),
                 CustomerName = model.CustomerName.Trim(),
                 Phone = model.Phone.Trim(),
@@ -118,17 +107,27 @@ public class OrdersController(
                 Subtotal = subtotal,
                 Discount = discount,
                 ShippingFee = subtotal - discount >= 500000 ? 0 : 30000,
-                CreatedAt = DateTime.UtcNow,
-                PaymentDeadline = model.PaymentMethod == "COD" ? null : DateTime.UtcNow.AddMinutes(10)
+                CreatedAt = nowUtc,
+                PaymentDeadline = model.PaymentMethod == "COD" ? null : nowUtc.AddMinutes(10)
             };
 
             order.TotalAmount = order.Subtotal - order.Discount + order.ShippingFee;
 
+            // Xử lý trừ tồn kho và ghi nhận chi tiết đơn hàng
             foreach (var item in items)
             {
-                var p = await db.Products.FirstAsync(x => x.Id == item.ProductId);
+                var p = await db.Products.FirstOrDefaultAsync(x => x.Id == item.ProductId);
+                if (p == null || !p.IsActive || p.DeletedAt != null || p.StockQuantity < item.Quantity)
+                {
+                    ModelState.AddModelError(string.Empty, $"Sản phẩm {p?.Name ?? "này"} không đủ tồn kho hoặc đã ngừng kinh doanh. Vui lòng kiểm tra lại giỏ hàng.");
+                    await tx.RollbackAsync();
+                    return View(model);
+                }
+
                 var unit = p.SalePrice ?? p.Price;
                 var before = p.StockQuantity;
+
+                // Trừ tồn kho thực tế
                 p.StockQuantity -= item.Quantity;
 
                 order.Items.Add(new OrderItem
@@ -148,7 +147,8 @@ public class OrdersController(
                     BeforeStock = before,
                     AfterStock = p.StockQuantity,
                     Reason = "Đặt đơn " + order.OrderCode,
-                    UserId = order.UserId
+                    UserId = order.UserId,
+                    CreatedAt = nowUtc
                 });
             }
 
@@ -172,7 +172,7 @@ public class OrdersController(
         {
             await tx.RollbackAsync();
             logger.LogError(ex, "Checkout failed");
-            ModelState.AddModelError(string.Empty, "Không thể tạo đơn hàng lúc này. Vui lòng thử lại.");
+            ModelState.AddModelError(string.Empty, "Không thể tạo đơn hàng lúc này: " + (ex.InnerException?.Message ?? ex.Message));
             return View(model);
         }
     }
@@ -184,11 +184,19 @@ public class OrdersController(
         var order = await db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id && o.UserId == uid);
         if (order is null) return NotFound();
 
-        if (order.PaidAt is null && order.PaymentDeadline.HasValue && DateTime.UtcNow >= order.PaymentDeadline.Value)
+        var nowUtc = DateTime.UtcNow;
+        if (order.PaidAt is null && order.PaymentDeadline.HasValue)
         {
-            await ExpireAndReleaseInventoryAsync(order);
-            TempData["Error"] = "Đơn hàng đã hết thời gian thanh toán 10 phút.";
-            return RedirectToAction(nameof(Index));
+            var deadlineUtc = DateTime.SpecifyKind(order.PaymentDeadline.Value, DateTimeKind.Utc);
+            if (nowUtc >= deadlineUtc)
+            {
+                await ExpireAndReleaseInventoryAsync(order);
+                TempData["Error"] = "Đơn hàng đã hết thời gian thanh toán 10 phút và đã được hủy.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var remainingSeconds = Math.Max(0, (int)(deadlineUtc - nowUtc).TotalSeconds);
+            ViewBag.RemainingSeconds = remainingSeconds;
         }
 
         if (order.PaymentMethod == "COD")
@@ -196,9 +204,21 @@ public class OrdersController(
 
         var selectedProvider = provider ?? (order.PaymentMethod == "QR" ? "VietQR" : "Card");
         ViewBag.PaymentProvider = selectedProvider;
-        ViewBag.QrUrl = order.PaymentMethod == "QR" ? payment.BuildQrUrl(order.OrderCode, order.TotalAmount, selectedProvider) : null;
-        ViewBag.DeepLink = order.PaymentMethod == "QR" ? payment.GetDeepLink(order.OrderCode, order.TotalAmount, selectedProvider) : null;
-        ViewBag.Deadline = order.PaymentDeadline?.ToString("o");
+
+        if (order.PaymentMethod == "QR")
+        {
+            if (string.Equals(selectedProvider, "MoMo", StringComparison.OrdinalIgnoreCase))
+            {
+                ViewBag.QrUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=2|99|0900000000|LUMIPHUX||0|0|{(long)order.TotalAmount}|{order.OrderCode}|transfer_myqr";
+                ViewBag.DeepLink = "momo://app";
+            }
+            else
+            {
+                ViewBag.QrUrl = payment.BuildQrUrl(order.OrderCode, order.TotalAmount, selectedProvider);
+                ViewBag.DeepLink = payment.GetDeepLink(order.OrderCode, order.TotalAmount, selectedProvider);
+            }
+        }
+
         return View(order);
     }
 
@@ -209,17 +229,21 @@ public class OrdersController(
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == model.OrderId && o.UserId == uid);
         if (order is null) return NotFound();
 
-        if (order.PaymentDeadline.HasValue && DateTime.UtcNow >= order.PaymentDeadline.Value)
+        var nowUtc = DateTime.UtcNow;
+        if (order.PaymentDeadline.HasValue)
         {
-            await ExpireAndReleaseInventoryAsync(order);
-            TempData["Error"] = "Đã hết 10 phút thanh toán.";
-            return RedirectToAction(nameof(Index));
+            var deadlineUtc = DateTime.SpecifyKind(order.PaymentDeadline.Value, DateTimeKind.Utc);
+            if (nowUtc >= deadlineUtc)
+            {
+                await ExpireAndReleaseInventoryAsync(order);
+                TempData["Error"] = "Đã hết thời gian thanh toán thẻ.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         if (!payment.ValidateDemoCard(model.CardNumber))
         {
             ModelState.AddModelError(nameof(model.CardNumber), "Số thẻ demo không hợp lệ. Ví dụ: 4242 4242 4242 4242");
-            ViewBag.Deadline = order.PaymentDeadline?.ToString("o");
             return View("Payment", order);
         }
 
@@ -239,11 +263,16 @@ public class OrdersController(
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == id && o.UserId == uid);
         if (order is null) return NotFound();
 
-        if (order.PaymentDeadline.HasValue && DateTime.UtcNow >= order.PaymentDeadline.Value)
+        var nowUtc = DateTime.UtcNow;
+        if (order.PaymentDeadline.HasValue)
         {
-            await ExpireAndReleaseInventoryAsync(order);
-            TempData["Error"] = "Đã hết thời gian thanh toán QR.";
-            return RedirectToAction(nameof(Index));
+            var deadlineUtc = DateTime.SpecifyKind(order.PaymentDeadline.Value, DateTimeKind.Utc);
+            if (nowUtc >= deadlineUtc)
+            {
+                await ExpireAndReleaseInventoryAsync(order);
+                TempData["Error"] = "Đã hết thời gian thanh toán QR.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         order.PaidAt = DateTime.UtcNow;
@@ -279,8 +308,9 @@ public class OrdersController(
         await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         try
         {
+            var nowUtc = DateTime.UtcNow;
             order.Status = "Cancelled";
-            order.CancelledAt = DateTime.UtcNow;
+            order.CancelledAt = nowUtc;
             order.CancellationReason = reason == "Lý do khác" && !string.IsNullOrWhiteSpace(otherReason)
                 ? otherReason.Trim()
                 : reason;
@@ -311,7 +341,12 @@ public class OrdersController(
     private async Task ExpireAndReleaseInventoryAsync(Order order)
     {
         if (order.PaidAt is not null || order.InventoryReleasedAt.HasValue) return;
+
+        var nowUtc = DateTime.UtcNow;
         order.Status = "PaymentExpired";
+        order.CancelledAt = nowUtc;
+        order.CancellationReason = "Hết hạn thanh toán đơn " + order.OrderCode;
+
         ReleaseOrderInventory(order, "Hết hạn thanh toán đơn " + order.OrderCode);
         await db.SaveChangesAsync();
     }
@@ -320,13 +355,15 @@ public class OrdersController(
     {
         if (order.InventoryReleasedAt.HasValue) return;
 
+        var nowUtc = DateTime.UtcNow;
         foreach (var item in order.Items)
         {
             var product = db.Products.Find(item.ProductId);
             if (product is null) continue;
 
             var before = product.StockQuantity;
-            product.StockQuantity += item.Quantity;
+            product.StockQuantity += item.Quantity; // Hoàn kho
+
             db.InventoryTransactions.Add(new InventoryTransaction
             {
                 ProductId = product.Id,
@@ -335,10 +372,11 @@ public class OrdersController(
                 BeforeStock = before,
                 AfterStock = product.StockQuantity,
                 Reason = reason,
-                UserId = order.UserId
+                UserId = order.UserId,
+                CreatedAt = nowUtc
             });
         }
 
-        order.InventoryReleasedAt = DateTime.UtcNow;
+        order.InventoryReleasedAt = nowUtc;
     }
 }

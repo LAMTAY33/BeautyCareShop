@@ -1,0 +1,211 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phân quyền hệ thống - LUMIPHUX</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .perm-header {
+            background: #212529;
+            color: #fff;
+            padding: 1.25rem 2rem;
+        }
+
+        .table-matrix th, .table-matrix td {
+            vertical-align: middle;
+        }
+
+        .form-check-input {
+            width: 1.35em;
+            height: 1.35em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="perm-header d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0 fw-bold"><i class="fa-solid fa-user-shield text-warning me-2"></i>BẢNG PHÂN QUYỀN CHỨC NĂNG</h5>
+            <small class="text-white-50">Dành riêng cho SuperAdmin / Owner</small>
+        </div>
+        <div>
+            <a href="/Admin/Dashboard" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i> Thoát về Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container-fluid py-4 px-4">
+        <!-- Tabs chuyển đổi -->
+        <ul class="nav nav-pills mb-3" id="permTab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active fw-semibold" id="role-tab" data-bs-toggle="pill" data-bs-target="#tab-role" type="button">
+                    <i class="fa-solid fa-users-gear me-1"></i> Phân quyền theo Nhóm (Role)
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link fw-semibold" id="user-tab" data-bs-toggle="pill" data-bs-target="#tab-user" type="button">
+                    <i class="fa-solid fa-user-tag me-1"></i> Phân quyền theo Cá nhân (User)
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- TAB 1: ROLE MATRIX -->
+            <div class="tab-pane fade show active" id="tab-role">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <div id="loadingRole" class="text-center p-5 text-muted">
+                            <div class="spinner-border text-primary spinner-border-sm me-2"></div> Đang tải ma trận phân quyền Nhóm...
+                        </div>
+                        <div class="table-responsive" id="tableRoleBox" style="display:none;">
+                            <table class="table table-bordered table-hover table-matrix mb-0" id="roleTable"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: USER MATRIX -->
+            <div class="tab-pane fade" id="tab-user">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <div id="loadingUser" class="text-center p-5 text-muted">
+                            <div class="spinner-border text-primary spinner-border-sm me-2"></div> Đang tải danh sách nhân sự...
+                        </div>
+                        <div class="table-responsive" id="tableUserBox" style="display:none;">
+                            <table class="table table-bordered table-hover table-matrix mb-0" id="userTable"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            loadRoleMatrix();
+            loadUserMatrix();
+        });
+
+        // 1. TẢI VÀ RENDER MA TRẬN ROLE
+        async function loadRoleMatrix() {
+            try {
+                const res = await fetch('/Permission/GetRoleMatrixData');
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+
+                const { roles, permissions, rolePermissions } = data;
+                let html = `<thead class="table-dark"><tr><th style="min-width: 260px;">Chức năng hệ thống</th>`;
+                roles.forEach(r => html += `<th class="text-center" style="min-width: 140px;">${r.name}</th>`);
+                html += `</tr></thead><tbody>`;
+
+                permissions.forEach(p => {
+                    html += `<tr>
+                            <td>
+                                <div class="fw-bold">${p.permissionName}</div>
+                                <small class="text-muted">${p.moduleGroup} • <span class="badge bg-secondary-subtle text-secondary">${p.permissionId}</span></small>
+                            </td>`;
+                    roles.forEach(r => {
+                        const checked = rolePermissions.some(rp => rp.roleId === r.id && rp.permissionId === p.permissionId && rp.isGranted);
+                        html += `<td class="text-center">
+                                <input class="form-check-input" type="checkbox" data-role-id="${r.id}" data-perm-id="${p.permissionId}" ${checked ? 'checked' : ''} onchange="toggleRolePerm(this)">
+                            </td>`;
+                    });
+                    html += `</tr>`;
+                });
+                html += `</tbody>`;
+
+                document.getElementById('roleTable').innerHTML = html;
+                document.getElementById('loadingRole').style.display = 'none';
+                document.getElementById('tableRoleBox').style.display = 'block';
+            } catch (err) {
+                document.getElementById('loadingRole').innerHTML = `<div class="alert alert-danger m-3">Lỗi tải dữ liệu nhóm: ${err.message}</div>`;
+            }
+        }
+
+        async function toggleRolePerm(el) {
+            const roleId = el.dataset.roleId;
+            const permissionId = el.dataset.permId;
+            const isGranted = el.checked;
+            el.disabled = true;
+
+            try {
+                const res = await fetch('/Permission/ToggleRolePermission', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roleId, permissionId, isGranted })
+                });
+                if (!res.ok) throw new Error();
+            } catch {
+                alert('Không thể lưu thay đổi quyền cho nhóm!');
+                el.checked = !isGranted;
+            } finally {
+                el.disabled = false;
+            }
+        }
+
+        // 2. TẢI VÀ RENDER MA TRẬN USER
+        async function loadUserMatrix() {
+            try {
+                const res = await fetch('/Permission/GetMatrixData');
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+
+                const { users, permissions, userPermissions } = data;
+                let html = `<thead class="table-light"><tr><th style="min-width: 260px;">Chức năng hệ thống</th>`;
+                users.forEach(u => html += `<th class="text-center" style="min-width: 150px;">${u.email}<br><small class="text-muted fw-normal">${u.userName}</small></th>`);
+                html += `</tr></thead><tbody>`;
+
+                permissions.forEach(p => {
+                    html += `<tr>
+                            <td>
+                                <div class="fw-bold">${p.permissionName}</div>
+                                <small class="text-muted">${p.moduleGroup} (${p.permissionId})</small>
+                            </td>`;
+                    users.forEach(u => {
+                        const checked = userPermissions.some(up => up.userId === u.id && up.permissionId === p.permissionId && up.isGranted);
+                        html += `<td class="text-center">
+                                <input class="form-check-input" type="checkbox" data-user-id="${u.id}" data-perm-id="${p.permissionId}" ${checked ? 'checked' : ''} onchange="toggleUserPerm(this)">
+                            </td>`;
+                    });
+                    html += `</tr>`;
+                });
+                html += `</tbody>`;
+
+                document.getElementById('userTable').innerHTML = html;
+                document.getElementById('loadingUser').style.display = 'none';
+                document.getElementById('tableUserBox').style.display = 'block';
+            } catch (err) {
+                document.getElementById('loadingUser').innerHTML = `<div class="alert alert-danger m-3">Lỗi tải dữ liệu cá nhân: ${err.message}</div>`;
+            }
+        }
+
+        async function toggleUserPerm(el) {
+            const userId = el.dataset.userId;
+            const permissionId = el.dataset.permId;
+            const isGranted = el.checked;
+            el.disabled = true;
+
+            try {
+                const res = await fetch('/Permission/TogglePermission', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, permissionId, isGranted })
+                });
+                if (!res.ok) throw new Error();
+            } catch {
+                alert('Không thể lưu thay đổi quyền cho nhân sự!');
+                el.checked = !isGranted;
+            } finally {
+                el.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

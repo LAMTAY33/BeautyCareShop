@@ -269,7 +269,12 @@
                     <div class="product-body">
                         <small class="text-muted">@p.Category?.Name</small>
                         <h3 class="fs-6 mt-1 mb-2"><a href="/Shop/Details?slug=@p.Slug" class="text-dark text-decoration-none">@p.Name</a></h3>
-                        <div class="stars text-warning small mb-1">★★★★★ <span class="text-muted">(@p.ReviewCount)</span></div>
+
+                        <!-- Hiển thị sao và Số lượng tồn kho trực tiếp trong ngoặc -->
+                        <div class="stars text-warning small mb-1">
+                            ★★★★★ <span class="text-muted">(@p.StockQuantity)</span>
+                        </div>
+
                         <div class="price fw-bold mb-2">
                             @((p.SalePrice ?? p.Price).ToString("N0"))₫
                             @if (p.SalePrice.HasValue)

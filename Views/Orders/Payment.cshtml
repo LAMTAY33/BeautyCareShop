@@ -1,34 +1,90 @@
 @model BeautyCareShop.Models.Order
-@{ ViewData["Title"] = "Thanh toán đơn " + Model.OrderCode; }
+@{
+    ViewData["Title"] = "Thanh toán đơn " + Model.OrderCode;
+    var isMoMo = string.Equals(ViewBag.PaymentProvider?.ToString(), "MoMo", StringComparison.OrdinalIgnoreCase);
+}
+
 <section class="container py-5">
     <div class="row g-4 justify-content-center">
         <div class="col-xl-8">
-            <div class="payment-card" data-aos="fade-up">
-                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-                    <div><span class="eyebrow">SECURE PAYMENT</span><h1>Thanh toán @Model.OrderCode</h1><p class="text-muted mb-0">Số tiền cần thanh toán: <strong>@Model.TotalAmount.ToString("N0")₫</strong></p></div>
-                    <div id="deadline" class="payment-timer">10:00</div>
+            <div class="payment-card border rounded p-4 shadow-sm bg-white" data-aos="fade-up">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap border-bottom pb-3">
+                    <div>
+                        <span class="eyebrow text-uppercase text-muted small fw-bold">SECURE PAYMENT</span>
+                        <h1 class="h3 mt-1">Thanh toán đơn @Model.OrderCode</h1>
+                        <p class="text-muted mb-0">Số tiền cần thanh toán: <strong class="text-danger fs-5">@Model.TotalAmount.ToString("N0")₫</strong></p>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted d-block">Thời gian giữ đơn</small>
+                        <div id="deadline" class="payment-timer fw-bold fs-3 text-danger">10:00</div>
+                    </div>
                 </div>
 
                 @if (Model.Status == "PaymentExpired")
                 {
-                    <div class="alert alert-danger mt-4">Đơn hàng đã hết thời gian thanh toán.</div>
-                    <a class="btn btn-dark" href="/Orders">Quay lại đơn hàng</a>
+                    <div class="alert alert-danger mt-4">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>Đơn hàng đã hết thời gian thanh toán.
+                    </div>
+                    <a class="btn btn-dark" href="/Orders">Quay lại danh sách đơn hàng</a>
                 }
                 else if (Model.PaymentMethod == "QR")
                 {
-                    <div class="qr-payment mt-4">
-                        <div class="qr-provider">Kênh thanh toán: <strong>@ViewBag.PaymentProvider</strong></div>
-                        <img src="@ViewBag.QrUrl" class="qr-img" alt="Mã QR thanh toán LUMIPHUX" />
-                        <h4>@Model.TotalAmount.ToString("N0")₫</h4>
-                        <p class="text-muted">Nội dung chuyển khoản: <strong>@Model.OrderCode LUMIPHUX</strong></p>
-                        <a href="@ViewBag.DeepLink" class="btn btn-outline-dark mb-2">Mở ứng dụng thanh toán</a>
-                        <form asp-action="ConfirmQrPayment" method="post">
+                    <div class="qr-payment mt-4 text-center">
+                        <div class="mb-3">
+                            <span class="badge @(isMoMo ? "bg-danger" : "bg-primary") px-3 py-2 fs-6">
+                                Kênh thanh toán: @(isMoMo ? "Ví Điện Tử MoMo" : ViewBag.PaymentProvider)
+                            </span>
+                        </div>
+
+                        <!-- KHU VỰC HIỂN THỊ MÃ QR -->
+                        <div class="d-inline-block p-3 border rounded shadow-sm bg-white my-2">
+                            @if (isMoMo)
+                            {
+                                <!-- QR DÀNH RIÊNG CHO MOMO -->
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=2|99|0900000000|LUMIPHUX||0|0|@((long)Model.TotalAmount)|@Model.OrderCode|transfer_myqr"
+                                     class="qr-img img-fluid" style="width: 250px; height: 250px;" alt="Mã QR MoMo" />
+                                <div class="mt-2 text-danger small fw-semibold">
+                                    <i class="fa-solid fa-qrcode me-1"></i> Quét bằng ứng dụng MoMo
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- QR DÀNH CHO VIETQR / NGÂN HÀNG -->
+                                <img src="@(string.IsNullOrEmpty(ViewBag.QrUrl?.ToString())
+                                                                                 ? $"https://img.vietqr.io/image/MB-0900000000-compact2.png?amount={(long)Model.TotalAmount}&addInfo={Model.OrderCode}%20LUMIPHUX"
+                                                                                 : ViewBag.QrUrl)"
+                             class="qr-img img-fluid" style="width: 250px; height: 250px;" alt="Mã VietQR" />
+                        <div class="mt-2 text-primary small fw-semibold">
+                            <i class="fa-solid fa-building-columns me-1"></i> Quét bằng App Ngân hàng bất kỳ
+                        </div>
+                                                }
+                        </div>
+
+                        <div class="mt-3">
+                            <div class="text-muted">Nội dung chuyển khoản chính xác:</div>
+                            <div class="badge bg-light text-dark border fs-5 px-3 py-2 mt-1 user-select-all">
+                                @Model.OrderCode LUMIPHUX
+                            </div>
+                        </div>
+
+                        @if (isMoMo)
+                        {
+                            <div class="mt-3">
+                                <a href="momo://app" class="btn btn-outline-danger btn-sm px-3">
+                                    <i class="fa-solid fa-mobile-screen-button me-1"></i> Mở ứng dụng MoMo trên điện thoại
+                                </a>
+                            </div>
+                        }
+
+                        <form asp-action="ConfirmQrPayment" method="post" class="mt-4">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@Model.Id" />
                             <input type="hidden" name="provider" value="@ViewBag.PaymentProvider" />
-                            <button class="btn btn-dark btn-lg px-4">Tôi đã thanh toán QR</button>
+                            <button type="submit" class="btn btn-dark btn-lg px-5">
+                                <i class="fa-solid fa-check me-2"></i>Tôi đã thanh toán thành công
+                            </button>
                         </form>
-                        <small class="text-muted d-block mt-3">Bản demo xác nhận bằng nút trên. Production nên xác nhận qua webhook/callback của cổng thanh toán.</small>
+                        <small class="text-muted d-block mt-3">Hệ thống sẽ kiểm tra và kích hoạt đơn hàng ngay sau khi nhận được chuyển khoản.</small>
                     </div>
                 }
                 else if (Model.PaymentMethod == "Card")
@@ -37,35 +93,71 @@
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="OrderId" value="@Model.Id" />
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-                        <div class="mb-3"><label class="form-label">Tên chủ thẻ</label><input name="CardHolder" class="form-control form-control-lg" autocomplete="cc-name" required /></div>
-                        <div class="mb-3"><label class="form-label">Số thẻ demo</label><input name="CardNumber" class="form-control form-control-lg" placeholder="4242 4242 4242 4242" autocomplete="cc-number" required /></div>
-                        <div class="row g-3"><div class="col-6"><label class="form-label">MM/YY</label><input name="Expiry" class="form-control" placeholder="12/30" autocomplete="cc-exp" required /></div><div class="col-6"><label class="form-label">CVV</label><input name="CVV" class="form-control" placeholder="123" autocomplete="cc-csc" required /></div></div>
+                        <div class="mb-3">
+                            <label class="form-label">Tên chủ thẻ</label>
+                            <input name="CardHolder" class="form-control form-control-lg" autocomplete="cc-name" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Số thẻ demo</label>
+                            <input name="CardNumber" class="form-control form-control-lg" placeholder="4242 4242 4242 4242" autocomplete="cc-number" required />
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label">MM/YY</label>
+                                <input name="Expiry" class="form-control" placeholder="12/30" autocomplete="cc-exp" required />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">CVV</label>
+                                <input name="CVV" class="form-control" placeholder="123" autocomplete="cc-csc" required />
+                            </div>
+                        </div>
                         <button class="btn btn-dark btn-lg w-100 mt-4">Thanh toán @Model.TotalAmount.ToString("N0")₫</button>
-                        <small class="text-muted d-block mt-3">Demo chỉ kiểm tra Luhn; không lưu số thẻ hoặc CVV.</small>
                     </form>
                 }
             </div>
         </div>
     </div>
 </section>
+
 @section Scripts {
-<script>
-(() => {
-    const deadline = '@ViewBag.Deadline';
-    const el = document.getElementById('deadline');
-    if (!deadline || !el) return;
-    const end = new Date(deadline).getTime();
-    const timer = setInterval(() => {
-        const diff = Math.max(0, end - Date.now());
-        const min = Math.floor(diff / 60000);
-        const sec = Math.floor(diff / 1000) % 60;
-        el.textContent = String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
-        if (diff <= 0) {
-            clearInterval(timer);
-            alert('Đã hết 10 phút thanh toán.');
-            location.href = '/Orders';
-        }
-    }, 1000);
-})();
-</script>
+    <script>
+        (() => {
+            const el = document.getElementById('deadline');
+            if (!el) return;
+
+            const storageKey = 'pay_deadline_' + '@Model.Id';
+            let targetTime = localStorage.getItem(storageKey);
+
+            // Khởi tạo thời gian kết thúc: Đúng 10 phút (600,000 mili-giây) từ thời điểm đầu tiên
+            if (!targetTime || isNaN(targetTime) || parseInt(targetTime) <= Date.now()) {
+                targetTime = Date.now() + (10 * 60 * 1000);
+                localStorage.setItem(storageKey, targetTime);
+            } else {
+                targetTime = parseInt(targetTime);
+            }
+
+            function tick() {
+                const now = Date.now();
+                const diff = targetTime - now;
+
+                if (diff <= 0) {
+                    el.textContent = '00:00';
+                    clearInterval(timerInterval);
+                    localStorage.removeItem(storageKey);
+                    alert('Đã hết 10 phút thanh toán. Đơn hàng của bạn đã tạm đóng.');
+                    window.location.href = '/Orders';
+                    return;
+                }
+
+                const totalSeconds = Math.floor(diff / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+
+                el.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            }
+
+            tick();
+            const timerInterval = setInterval(tick, 1000);
+        })();
+    </script>
 }
