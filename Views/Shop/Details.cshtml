@@ -1,23 +1,30 @@
 @model BeautyCareShop.Models.Product
-@{ ViewData["Title"] = Model.Name; }
+@{
+    ViewData["Title"] = Model.Name;
+}
 <section class="container py-5">
     <div class="row g-5">
         <div class="col-lg-6">
             <div class="detail-main"><img id="mainProductImage" src="@Model.ThumbnailUrl" alt="@Model.Name" onerror="this.src='/images/product-placeholder.svg';" /></div>
             <div class="thumbs mt-3">
                 @foreach (var im in Model.Images)
-                { <img src="@im.Url" onclick="document.getElementById('mainProductImage').src=this.src" alt="@Model.Name" onerror="this.src='/images/product-placeholder.svg';" /> }
+                {
+                    <img src="@im.Url" onclick="document.getElementById('mainProductImage').src=this.src" alt="@Model.Name" onerror="this.src='/images/product-placeholder.svg';" />
+                }
             </div>
         </div>
         <div class="col-lg-6">
             <span class="eyebrow">@Model.Category?.Name</span>
             <h1 class="display-5 mt-2">@Model.Name</h1>
-            <div class="stars mb-3">★★★★★ <span>(@Model.ReviewCount) • @Model.RatingAverage.ToString("0.0")/5</span></div>
-            <div class="price big">@((Model.SalePrice ?? Model.Price).ToString("N0"))₫ @if(Model.SalePrice.HasValue){<del>@Model.Price.ToString("N0")₫</del>}</div>
+            <div class="stars mb-3">★★★★★ <span>(@Model.StockQuantity) • @Model.RatingAverage.ToString("0.0")/5</span></div>
+            <div class="price big">@((Model.SalePrice ?? Model.Price).ToString("N0"))₫ @if(Model.SalePrice.HasValue){
+            <del>@Model.Price.ToString("N0")₫</del>
+                        }
+</div>
             <p class="lead text-muted">@Model.ShortDescription</p>
             <div class="stock-chip">@(Model.StockQuantity > 0 ? $"Còn {Model.StockQuantity} sản phẩm" : "Hết hàng")</div>
             <form asp-controller="Cart" asp-action="Add" method="post" class="d-flex gap-2 mt-4">
-                @Html.AntiForgeryToken()<input type="hidden" name="productId" value="@Model.Id" /><input class="form-control" style="max-width:110px" type="number" min="1" max="@Model.StockQuantity" name="quantity" value="1" /><button class="btn btn-dark px-4" @(Model.StockQuantity==0?"disabled":null)>Thêm vào giỏ</button>
+                @Html.AntiForgeryToken()<input type="hidden" name="productId" value="@Model.Id" /><input class="form-control" style="max-width:110px" type="number" min="1" max="@Model.StockQuantity" name="quantity" value="1" /><button class="btn btn-dark px-4" @(Model.StockQuantity == 0 ? "disabled" : null)>Thêm vào giỏ</button>
             </form>
             <div class="accordion mt-5" id="productInfo">
                 <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#c1">Thành phần</button></h2><div id="c1" class="accordion-collapse collapse show"><div class="accordion-body">@Model.Ingredients</div></div></div>
@@ -30,8 +37,18 @@
 
     <div class="reviews-section mt-5 pt-5 border-top">
         <div class="section-heading"><div><span class="eyebrow">REVIEWS</span><h2>Khách hàng nói gì</h2></div></div>
-        @if (Model.Reviews.Count == 0) { <p class="text-muted">Chưa có đánh giá nào.</p> }
-        else { foreach (var review in Model.Reviews.OrderByDescending(x => x.CreatedAt).Take(8)) { <div class="review-item"><div class="stars">@(new string('★', review.Rating))@(new string('☆', 5-review.Rating))</div><strong>@review.CustomerName</strong><p class="mb-1">@review.Title</p><p class="text-muted mb-0">@review.Content</p></div> } }
+        @if (Model.Reviews.Count == 0)
+        {
+            <p class="text-muted">Chưa có đánh giá nào.</p>
+        }
+        else
+        {
+            foreach (var review in Model.Reviews.OrderByDescending(x => x.CreatedAt).Take(8))
+            {
+
+                <div class="review-item"><div class="stars">@(new string('★', review.Rating))@(new string('☆', 5 - review.Rating))</div><strong>@review.CustomerName</strong><p class="mb-1">@review.Title</p><p class="text-muted mb-0">@review.Content</p></div>
+            }
+        }
         @if (User.Identity?.IsAuthenticated == true)
         {
             <form asp-action="Review" method="post" class="checkout-card mt-4">

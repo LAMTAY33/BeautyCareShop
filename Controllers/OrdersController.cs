@@ -157,7 +157,6 @@ public class OrdersController(
 
             await db.SaveChangesAsync();
             await tx.CommitAsync();
-            await cart.ClearAsync();
 
             if (model.PaymentMethod == "COD")
             {
@@ -220,6 +219,51 @@ public class OrdersController(
         }
 
         return View(order);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelAndReturnToCart(int orderId)
+    {
+        var uid = users.GetUserId(User);
+        var order = await db.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == uid);
+
+        if (order == null) return NotFound();
+
+        if (order.PaidAt == null && order.Status == "Pending")
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
+            {
+                var nowUtc = DateTime.UtcNow;
+
+                order.Status = "Cancelled";
+                order.CancelledAt = nowUtc;
+                order.CancellationReason = "Khách hàng quay lại giỏ hàng";
+
+                ReleaseOrderInventory(order, "Khách quay lại giỏ đơn " + order.OrderCode);
+
+                await db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                var currentCart = await cart.GetAsync();
+                if (currentCart.Count == 0)
+                {
+                    foreach (var item in order.Items)
+                    {
+                        await cart.AddAsync(item.ProductId, item.Quantity);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                logger.LogError(ex, "Lỗi khi quay lại giỏ hàng từ đơn {OrderId}", orderId);
+            }
+        }
+
+        return RedirectToAction("Index", "Cart");
     }
 
     [HttpPost, ValidateAntiForgeryToken]

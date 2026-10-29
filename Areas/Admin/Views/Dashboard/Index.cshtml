@@ -1,14 +1,79 @@
 @{
-    ViewData["Title"] = "Owner Dashboard"; Layout = "/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Owner Dashboard";
+    Layout = "/Views/Shared/_Layout.cshtml";
 }
+
 <section class="container py-5">
-    <div class="section-heading"><div><span class="eyebrow">OWNER CONSOLE</span><h1>LUMIPHUX Dashboard</h1><p class="text-muted">Tổng quan vận hành Health & Beauty Care.</p></div></div>
-    <div class="stats-grid mt-4"><div><small>Sản phẩm đang bán</small><b>@ViewBag.ProductCount</b></div><div><small>Tổng đơn hàng</small><b>@ViewBag.OrderCount</b></div><div><small>Doanh thu</small><b>@(((decimal)ViewBag.Revenue).ToString("N0"))₫</b></div><div><small>Sắp hết hàng</small><b>@ViewBag.LowStock</b></div></div>
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow">OWNER CONSOLE</span>
+            <h1>LUMIPHUX Dashboard</h1>
+            <p class="text-muted">Tổng quan vận hành Health & Beauty Care.</p>
+        </div>
+    </div>
+
+    <div class="stats-grid mt-4">
+        <div>
+            <small>Sản phẩm đang bán</small>
+            <b>@ViewBag.ProductCount</b>
+        </div>
+        <div>
+            <small>Tổng đơn hàng</small>
+            <b>@ViewBag.OrderCount</b>
+        </div>
+        <div>
+            <small>Doanh thu</small>
+            <b>@(((decimal)ViewBag.Revenue).ToString("N0"))₫</b>
+        </div>
+        <div>
+            <small>Sắp hết hàng</small>
+            <b>@ViewBag.LowStock</b>
+        </div>
+    </div>
+
     <div class="admin-grid mt-4">
-        <a href="/Permission" class="admin-tile"><span>SECURITY</span><strong>Phân quyền chức năng</strong><small>Cấp & thu hồi quyền nhân sự (SuperAdmin)</small></a>
-        <a href="/ProductManager/Products" class="admin-tile"><span>CATALOG</span><strong>Quản lý sản phẩm</strong><small>CRUD, giá, hình ảnh, trạng thái</small></a>
-        <a href="/InventoryManager/Inventory" class="admin-tile"><span>INVENTORY</span><strong>Quản lý kho</strong><small>Nhập, xuất, cảnh báo tồn</small></a>
-        <a href="/CustomerService/Support" class="admin-tile"><span>SUPPORT</span><strong>CSKH & Live Chat</strong><small>SignalR và lịch sử hỗ trợ</small></a>
-        <a href="/Shop" class="admin-tile"><span>STORE</span><strong>Xem cửa hàng</strong><small>Kiểm tra trải nghiệm khách hàng</small></a>
+        <a href="/Permission" class="admin-tile">
+            <span>SECURITY</span>
+            <strong>Phân quyền chức năng</strong>
+            <small>Cấp & thu hồi quyền nhân sự (SuperAdmin)</small>
+        </a>
+
+        <a href="/ProductManager/Products" class="admin-tile">
+            <span>CATALOG</span>
+            <strong>Quản lý sản phẩm</strong>
+            <small>CRUD, giá, hình ảnh, trạng thái</small>
+        </a>
+
+        <a href="/InventoryManager/Inventory" class="admin-tile">
+            <span>INVENTORY</span>
+            <strong>Quản lý kho</strong>
+            <small>Nhập, xuất, cảnh báo tồn</small>
+        </a>
+
+        <a href="/CustomerService/Support" class="admin-tile">
+            <span>SUPPORT</span>
+            <strong>CSKH & Live Chat</strong>
+            <small>SignalR và lịch sử hỗ trợ</small>
+        </a>
+
+        <a href="/Shop" class="admin-tile">
+            <span>STORE</span>
+            <strong>Xem cửa hàng</strong>
+            <small>Kiểm tra trải nghiệm khách hàng</small>
+        </a>
+
+        <!-- NÚT 1: ĐƠN HÀNG ĐÃ THANH TOÁN -->
+        <a href="/Orders?status=Confirmed" class="admin-tile">
+            <span style="color: #198754;">PAID ORDERS</span>
+            <strong>Đơn đã thanh toán</strong>
+            <small>Xem đơn hoàn tất quét QR, thẻ hoặc COD</small>
+        </a>
+
+        <!-- NÚT 2: ĐƠN HÀNG CHƯA THANH TOÁN -->
+        <a href="/Orders?status=Pending" class="admin-tile">
+            <span style="color: #dc3545;">UNPAID ORDERS</span>
+            <strong>Đơn chưa thanh toán</strong>
+            <small>Đơn chờ chuyển khoản, giữ tồn kho 10 phút</small>
+        </a>
     </div>
 </section>
